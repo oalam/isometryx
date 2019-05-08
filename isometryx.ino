@@ -1,26 +1,25 @@
-
 #include "Config.h"
-#include "Workout.h"
+#include "WorkoutFactory.h"
 #include "Screen.h"
 #include "EventHandler.h"
 
-Workout workout;
-Screen screen(workout);
-EventHandler eventHandler(workout);
+WorkoutFactory factory;
+Screen screen(factory);
+EventHandler eventHandler(factory);
 
 void setup() {
   Serial.begin(57600);
 
+  factory.getCurrentWorkout()->setup();
   eventHandler.setup();
-  workout.setup();
   screen.setup();
 }
 
 void loop() {
-  eventHandler.loop();
+  eventHandler.loop();  
   
   // collect data accordingly to current workout
-  workout.loop();
+  factory.getCurrentWorkout()->loop();
 
   // display data to screen
   screen.loop();

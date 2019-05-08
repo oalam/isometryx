@@ -7,13 +7,12 @@ const int buttonPin = 6;     // the number of the pushbutton pin
 
 class EventHandler {
   public:
-    EventHandler(Workout &workout) : mWorkout(workout) {}
+    EventHandler(WorkoutFactory &workoutFactory) : mWorkoutFactory(workoutFactory) {}
 
     void setup() {
       // initialize the pushbutton pin as an input:
       pinMode(buttonPin, INPUT);
     }
-
 
     void loop() {
       // read the state of the pushbutton value:
@@ -22,13 +21,12 @@ class EventHandler {
       // if it has changed, it's time to change the mode
       long currentTime = millis();
       if ( currentState == HIGH ) {
-        mWorkout.setNextMode();
+        mWorkoutFactory.next();
       }
-
     }
 
   private:
-    Workout &mWorkout;
+    WorkoutFactory &mWorkoutFactory;
 
 };
 

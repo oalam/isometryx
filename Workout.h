@@ -2,66 +2,44 @@
 #define WORKOUT_H
 
 #include "HX711.h"
-#include "LoadStats.h"
+#include "WorkoutStats.h"
 #include "Climber.h"
-#include "Mode.h"
 
-Climber climber;
-LoadStats loadStatsL;
-LoadStats loadStatsR;
-HX711 scaleR;
-HX711 scaleL;
-Mode mode;
+
+enum WorkoutType {
+  ASSESSMENT_BODYWEIGHT,
+  WARMUP,
+  ASSESSMENT_MAXFORCE,
+  WORKOUT_MAXHANGS
+};
 
 enum WorkoutState {
   HANGING,
-  RESTING
+  RESTING,
+  IDLE
 };
-
-
 
 
 class Workout {
   public:
-    Workout()  {
+    Workout(WorkoutType type, unsigned short numReps, unsigned short numSets, unsigned short repHangingDurationMs, unsigned short restDurationMs, float maxPercentLimit) {
+      mType = type;
+      mNumReps = numReps;
+      mNumSets = numSets;
+      mRepHangingDurationMs = repHangingDurationMs;
+      mRestDurationMs = restDurationMs;
+      mMaxPercentLimit = maxPercentLimit; 
     }
 
-    float last() {
-      return loadStatsL.last() + loadStatsR.last();
-    }
-
-    float lastL() {
-      return loadStatsL.last();
-    }
-
-    float lastR() {
-      return loadStatsR.last();
-    }
-
-    float mean() {
-      return loadStatsL.mean() + loadStatsR.mean();
-    }
-
-    float maxValL() {
-      return loadStatsL.maxVal();
-    }
-
-    float maxValR() {
-      return loadStatsR.maxVal();
-    }
-
-    float maxVal() {
-      return loadStatsL.maxVal() + loadStatsR.maxVal();
-    }
 
     float strenghToWeight() {
-      return climber.strenghToWeight(maxVal());
+      return climber.strenghToWeight(stats.maxVal());
     }
 
     float percentMax() {
       float mMax = climber.getMaxForceL() + climber.getMaxForceR();
       if (mMax != 0.0f)
-        return last() * 100.0f / mMax;
+        return stats.last() * 100.0f / mMax;
       else return 0.0f;
     }
 
@@ -69,14 +47,29 @@ class Workout {
       return mTimeOverLimit / 1000.0f;
     }
 
+    float restingTime() {
+      return mRestingTime/ 1000.0f;
+    }
+
+     float restDurationMs() {
+      return mRestDurationMs/ 1000.0f;
+    }
+
     Climber getClimber() {
       return climber;
     }
 
-    Mode getMode() {
-      return mode;
+    WorkoutState getState(){
+      return state;
     }
 
+    WorkoutType getType(){
+      return mType;
+    }
+
+    WorkoutStats getStats() {
+      return stats;
+    }
     int getRepsCount() {
       return mRepsCount;
     }
@@ -85,111 +78,117 @@ class Workout {
       return mNumReps;
     }
 
-    /**
-       to switch between modes
-    */
-    Mode setNextMode() {
-      mRepsCount = 0;
-      mSetsCount = 0;
-      reset();
-      mode.next();
-    }
-
     void reset() {
       mTimeOverLimit = 0;
+      mRestingTime = 0;
       mStartTime = millis();
-      loadStatsL.reset();
-      loadStatsR.reset();
+      stats.reset();
     }
 
-    void checkState() {
-      if (state == RESTING && last() > 2) {
-        state = HANGING;
-        reset();
-      }
-      else if (state == HANGING && last() <= 2) {
-        state = RESTING;
-        reset();
-      } else if (state == HANGING && mTimeOverLimit > 7000) {
-        mRepsCount ++;
 
+    void printRep(){
+      Serial.print(F("Rep "));
+      Serial.print(mRepsCount);
+      Serial.print(F("/"));
+      Serial.print(mNumReps);      
+    }
+
+    void setup() {
+      stats.setup();
+      climber.load();
+    }
+
+    void loop() {
+      stats.loop();
+
+
+      if (percentMax() >= mMaxPercentLimit) {
+        mTimeOverLimit += 200;
+      }
+
+      if (climber.getMaxForceL() < mMaxL ) {
+        climber.setMaxForceL(mMaxL);
+      }
+
+      if (climber.getMaxForceR() < mMaxR) {
+        climber.setMaxForceR(mMaxR);
+      }
+
+      if (state == IDLE && stats.last() > 2) {
+        state = HANGING;
+        onRepStart();
+        printRep();
+        Serial.println(F(" started"));
+      }
+      else if (state == HANGING && stats.last() <= 2) {
+        state = IDLE;
+        onRepAbort();
+        printRep();
+        Serial.println(F(" aborted"));
+        reset();
+      } else if (state == HANGING && mTimeOverLimit > mRepHangingDurationMs) {
+        
+        // handle reps
+        mRepsCount ++;
         if (mRepsCount >= mNumReps) {
           mRepsCount = 0;
           mNumSets++;
         }
-        mTimeOverLimit = 0;
+
+        // handle sets
+        if (mSetsCount >= mNumSets) {
+          mRepsCount = 0;
+          mNumSets++;
+        }
+
+        // reset stuff
         state = RESTING;
+        onRepFinish();
+        printRep();
+        Serial.println(F(" finished"));
         reset();
+        onRestStart();
       }
-
-      if (percentMax() >= MAX_PERCENT_LIMIT) {
-        mTimeOverLimit += 200;
+      else if (state == RESTING && mRestingTime >= mRestDurationMs) {
+        state = IDLE;
+        onRestFinish();
+        Serial.println(F("rest finished"));
+        reset();
+      }else if (state == RESTING && mRestingTime < mRestDurationMs) {
+        mRestingTime += 200;
+        Serial.println(F(" started"));
       }
-
-
-
-    }
-
-    void setup() {
-      scaleL.begin(L_LOADCELL_DOUT_PIN, L_LOADCELL_SCK_PIN);
-      scaleL.set_scale(22.04622621848775f);
-      scaleL.tare();
-
-      scaleR.begin(R_LOADCELL_DOUT_PIN, R_LOADCELL_SCK_PIN);
-      scaleR.set_scale(22.04622621848775f);
-      scaleR.tare();
-
-      climber.load();
-      mode.setup();
-    }
-
-
-    void loop() {
-      if (scaleL.wait_ready_timeout(1000) && scaleR.wait_ready_timeout(1000)) {
-        float readingL = scaleL.get_units() / 1000.0f;
-        float readingR = scaleR.get_units() / 1000.0f;
-        unsigned long currentTime = millis();
-        loadStatsL.addData(readingL);
-        loadStatsR.addData(readingR);
-
-        if (readingL > mMaxL)
-          mMaxL = readingL;
-
-        if (readingR > mMaxR)
-          mMaxR = readingR;
-
-        if (climber.getMaxForceL() < mMaxL ) {
-          climber.setMaxForceL(mMaxL);
-        }
-
-        if (climber.getMaxForceR() < mMaxR) {
-          climber.setMaxForceR(mMaxR);
-        }
-
-
-      } else {
-        Serial.println(F("HX711 not found."));
-      }
-
-      checkState();
-
-      mode.loop();
-
+      repLoop();
     }
 
   protected:
 
-    int mRepsCount = 0;
-    int mSetsCount = 0;
-    int mNumReps = 6;
-    int mNumSets = 1;
+    virtual void onRepStart() = 0;
+    virtual void onRepFinish() = 0;
+    virtual void onRepAbort() = 0;
+    virtual void onRestStart() = 0;
+    virtual void onRestFinish() = 0;
+    virtual void repLoop() = 0;
+
+    unsigned short mRepsCount = 0;
+    unsigned short mSetsCount = 0;
+    unsigned short mNumReps;
+    unsigned short mNumSets;
+    unsigned short mRepHangingDurationMs;
+    unsigned short mRestDurationMs;
+    float mMaxPercentLimit;
     float mMaxL = 0.0f;
     float mMaxR = 0.0f;
-    WorkoutState state = RESTING;
+    WorkoutState state = IDLE;
 
 
-    long mStartTime;
-    long mTimeOverLimit;
+    unsigned long mStartTime;
+    unsigned long mTimeOverLimit;
+    unsigned long mRestingTime;
+
+    WorkoutType mType;
+    Climber climber;
+    WorkoutStats stats;
 };
 
 #endif
