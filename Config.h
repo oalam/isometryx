@@ -1,6 +1,7 @@
 #ifndef CONFIG_H
 #define CONFIG_H
 
+//#define DEBUG
 
 #include <SPI.h>
 #include <Wire.h>
@@ -8,8 +9,8 @@
 #include <Adafruit_SSD1306.h>
 
 // Isometryx config
-const int FRAME_RATE_MS = 200;
-const int IDLE_TIME_MS = 4000;
+const int FRAME_RATE_MS = 100;
+const int IDLE_TIME_MS = 2000;
 
 
 // HX711 circuit wiring
@@ -27,7 +28,7 @@ const short R_LOADCELL_SCK_PIN = 5;
 Adafruit_SSD1306 display(SCREEN_WIDTH, SCREEN_HEIGHT, &Wire, OLED_RESET);
 
 
-#define DEBUG
+
 
 String valueToString(const float value, int precision) {
   String valueString = "" ;

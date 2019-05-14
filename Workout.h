@@ -49,16 +49,6 @@ class Workout {
       }else{
         mCurrentHand = LEFT;
       }
-      Serial.print(F("Init workout with (totalReps, totalSets, repHangingDurationMs, restDurationMs, maxPercentLimit) = "));
-      Serial.print(totalReps);
-      Serial.print(F(", "));
-      Serial.print(totalSets);
-      Serial.print(F(", "));
-      Serial.print(repHangingDurationMs);
-      Serial.print(F(", "));
-      Serial.print(restDurationMs); 
-      Serial.print(F(", "));
-      Serial.println(maxPercentLimit);
       reset(IDLE);
     }
 
@@ -67,7 +57,7 @@ class Workout {
       return climber.strenghToWeight(stats.maxVal());
     }
 
-    float percentMax() {
+    int percentMax() {
       float mMax = climber.getMaxForceL() + climber.getMaxForceR();
       if(mHangingMode == ONE_HAND){
         if(mCurrentHand == LEFT){
@@ -80,21 +70,18 @@ class Workout {
       }
      
       if (mMax != 0.0f)
-        return stats.last() * 100.0f / mMax;
-      else return 0.0f;
+        return (int) (stats.last() * 100.0f / mMax);
+      else return 0;
     }
 
-    float timeOverLimit() {
-      return mTimeOverLimit / 1000.0f;
+    int remainingTime() {
+      return 1 + (mRepHangingDurationMs - mTimeOverLimit) / 1000 ;
     }
 
-    float restingTime() {
-      return mRestingTime/ 1000.0f;
+    int remainingRestTime() {
+      return 1 + (mRestDurationMs - mRestingTime) / 1000;
     }
 
-     float restDurationMs() {
-      return mRestDurationMs/ 1000.0f;
-    }
 
     Climber getClimber() {
       return climber;
@@ -137,21 +124,6 @@ class Workout {
       stats.reset();
     }
 
-
-    void printRep(){
-      Serial.print(F("Rep "));
-      Serial.print(mRepsCount);
-      Serial.print(F("/"));
-      Serial.print(mTotalReps);      
-    }
-
-    void printSet(){
-      Serial.print(F("Set "));
-      Serial.print(mSetsCount);
-      Serial.print(F("/"));
-      Serial.print(mTotalSets);      
-    }
-
     void setup() {
       stats.setup();
       climber.load();
@@ -160,6 +132,9 @@ class Workout {
     void loop() {
     
       stats.loop(); 
+#ifndef DEBUG
+      Serial.println(stats.last());
+#endif
       render();
       
       // wait a little while DONE or SWITCHING_HANDS
@@ -173,16 +148,7 @@ class Workout {
         // Start HANGING rep if there's more thant 2kg applied while IDLE
         if(stats.last() > 2){
           mRepsCount++;
-          onRepStart();
-          printRep();
-          if(mHangingMode == ONE_HAND){
-            if(mCurrentHand == LEFT)
-              Serial.println(F(" started for left hand"));
-            else
-              Serial.println(F(" started for right hand"));
-          }else
-            Serial.println(F(" started for both hand"));
-          
+          onRepStart();       
           reset(HANGING);         
         }
       }
@@ -202,8 +168,6 @@ class Workout {
         // Go back to IDLE when there's less than 2kg applied when HANGING
         if(stats.last() <= 2) {
           onRepAbort();
-          printRep();
-          Serial.println(F(" aborted"));
           mRepsCount--;
           reset(IDLE);
           return;
@@ -211,23 +175,19 @@ class Workout {
 
         // Finish a rep when we've been hanging for the requested time
         if (mTimeOverLimit > mRepHangingDurationMs) {
-          
           onRepFinish();
-          printRep();
-          Serial.println(F(" finished"));
 
           // switch hands but don't rest and go IDLE to start right hand hanging
           if (mHangingMode == ONE_HAND){
             
             if (mCurrentHand == LEFT) {
-              Serial.println(F("done a rep with left hand, switching to right"));
               mCurrentHand = RIGHT;
               mRepsCount--;
               reset(SWITCHING_HANDS);
               return;
             }
+            // done a full rep with the two hands, switching back to left
             else {
-              Serial.println(F("done a full rep with the two hands, switching back to left"));
               mCurrentHand = LEFT;
             }
           }
@@ -237,19 +197,15 @@ class Workout {
             mRepsCount = 0;
             mSetsCount++;
             onSetFinish();
-            printSet();
-            Serial.println(F(" finished"));
           }
 
           // have we done with the workout ?
           if (mSetsCount >= mTotalSets) {
             mSetsCount = 0;
             onWorkoutFinish();
-            Serial.println(F("Workout finished !"));
             reset(DONE);
             return;
           }else{
-            Serial.println(F("Rest started"));
             onRestStart();
             reset(RESTING);
             return;
@@ -264,11 +220,9 @@ class Workout {
         // Rest time is over returning to IDLE
         if(mRestingTime >= mRestDurationMs) {
           onRestFinish();
-          Serial.println(F("rest finished"));
           reset(IDLE);
           return;
         } 
-
         // otherwise increase resting time
         else {
           mRestingTime += FRAME_RATE_MS;

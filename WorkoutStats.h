@@ -24,11 +24,11 @@ class WorkoutStats {
     void setup() {
       scaleDown.begin(L_LOADCELL_DOUT_PIN, L_LOADCELL_SCK_PIN);
       scaleDown.set_scale(22.04622621848775f);
-      scaleDown.tare();
+      scaleDown.tare(5);
 
       scaleUp.begin(R_LOADCELL_DOUT_PIN, R_LOADCELL_SCK_PIN);
       scaleUp.set_scale(22.04622621848775f);
-      scaleUp.tare();
+      scaleUp.tare(5);
     }
 
 
