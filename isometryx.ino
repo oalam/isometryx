@@ -1,29 +1,25 @@
 #include "Config.h"
 #include "WorkoutFactory.h"
-#include "Screen.h"
 #include "EventHandler.h"
 
 WorkoutFactory factory;
-Screen screen(factory);
 EventHandler eventHandler(factory);
 
 void setup() {
-  Serial.begin(57600);
+  Serial.begin(115200);
+  // SSD1306_SWITCHCAPVCC = generate display voltage from 3.3V internally
+  if (!display.begin(SSD1306_SWITCHCAPVCC, 0x3C)) { // Address 0x3C for 128x32
+    Serial.println(F("SSD1306 allocation failed"));
+    for (;;); // Don't proceed, loop forever
+  }
 
-  factory.getCurrentWorkout()->setup();
-  eventHandler.setup();
-  screen.setup();
+  factory.setup();
+  eventHandler.setup();  
 }
 
 void loop() {
   eventHandler.loop();  
+  factory.loop();
   
-  // collect data accordingly to current workout
-  factory.getCurrentWorkout()->loop();
-
-  // display data to screen
-  screen.loop();
-
-  // wait a little
-  delay(200);
+  delay(FRAME_RATE_MS);
 }

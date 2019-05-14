@@ -1,5 +1,5 @@
 {
     "board": "arduino:avr:uno",
-    "port": "/dev/cu.usbmodem144101",
+    "port": "/dev/cu.usbmodem141101",
     "sketch": "isometryx.ino"
 }

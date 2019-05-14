@@ -21,6 +21,7 @@ class EventHandler {
       // if it has changed, it's time to change the mode
       long currentTime = millis();
       if ( currentState == HIGH ) {
+        Serial.println(F("button pressed, changing workout"));
         mWorkoutFactory.next();
       }
     }

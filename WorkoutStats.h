@@ -18,7 +18,7 @@ HX711 scaleDown;
 
 class WorkoutStats {
   public:
-    WorkoutStats() : mNumSamples(10), mCurrNumSamples(0), mTotal(0), mRefVariance(0), mMin(0), mMax(0) {}
+    WorkoutStats() : mNumSamples(20), mCurrNumSamples(0), mTotal(0), mRefVariance(0), mMin(0), mMax(0) {}
 
 
     void setup() {

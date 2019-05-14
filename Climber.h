@@ -39,11 +39,16 @@ class Climber {
     void setMaxForceR(float maxForce) {
       mMaxForceR = maxForce;
       writeFloat(maxForceRAddress, maxForce);
+
+      Serial.print(F("Write climber mMaxForceR to EEPROM : "));
+      Serial.println(mMaxForceR);
     }
 
     void setMaxForceL(float maxForce) {
       mMaxForceL = maxForce;
       writeFloat(maxForceLAddress, maxForce);
+      Serial.print(F("Write climber mMaxForceL to EEPROM : "));
+      Serial.println(mMaxForceL);
     }
 
     float getMaxForceR() {
@@ -62,9 +67,14 @@ class Climber {
       mMaxForceL = readFloat(maxForceLAddress);
       mMaxForceR = readFloat(maxForceRAddress);
       Serial.print(F("Read climber data from EEPROM : "));
-      Serial.print(valueToString(mMaxForceL, 1));
+      Serial.print(mMaxForceL);
       Serial.print( F(" "));
-      Serial.println(valueToString(mMaxForceR, 1));
+      Serial.println(mMaxForceR);
+      if(mMaxForceL <= 0.0f)
+        mMaxForceL = 3.0f;
+
+      if(mMaxForceR <= 0.0f)
+        mMaxForceR = 3.0f;
     }
 
   protected:
