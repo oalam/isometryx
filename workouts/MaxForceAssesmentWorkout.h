@@ -99,26 +99,24 @@ class MaxForceAssessmentWorkout : public Workout {
         case HANGING :
           if(mHangingMode == ONE_HAND){
             if(mCurrentHand == LEFT){
-              display.print(F("L:"));
-              display.print(valueToString(mMaxForceLeft, 1));
+              display.print(F("L"));
+              display.print(valueToString(getStats().last(), 1));
               display.print(F(" "));
               display.println(valueToString(getClimber().getMaxForceL(), 1));
             }else{
-              display.print(F("R:"));
-              display.print(valueToString(mMaxForceRight, 1));
+              display.print(F("R"));
+              display.print(valueToString(getStats().last(), 1));
               display.print(F(" "));
               display.println(valueToString(getClimber().getMaxForceR(), 1));
             }
           }else{
-            display.print(F("B:"));
+            display.print(F("B"));
             display.print(valueToString(mMaxForceLeft+mMaxForceRight, 1));
             display.print(F(" "));
             display.println(valueToString(getClimber().getMaxForceL()+ getClimber().getMaxForceR(), 1));
           }
           
-          display.print(valueToString(getStats().last(), 1));
-          display.print(F(" "));
-          display.println(valueToString(getStats().last(), 1));
+          
 
           display.print(String(percentMax()));
           display.print(F("% ")); 

@@ -75,11 +75,11 @@ class Workout {
     }
 
     int remainingTime() {
-      return 1 + (mRepHangingDurationMs - mTimeOverLimit) / 1000 ;
+      return (mRepHangingDurationMs - mTimeOverLimit) / 1000 ;
     }
 
     int remainingRestTime() {
-      return 1 + (mRestDurationMs - mRestingTime) / 1000;
+      return (mRestDurationMs - mRestingTime) / 1000;
     }
 
 
