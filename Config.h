@@ -38,9 +38,6 @@ HX711 scaleDown;
 
 Adafruit_SSD1306 display(SCREEN_WIDTH, SCREEN_HEIGHT, &Wire, OLED_RESET);
 
-
-
-
 String valueToString(const float value, int precision) {
   String valueString = "" ;
   char buff[10];
@@ -50,24 +47,5 @@ String valueToString(const float value, int precision) {
   return valueString;
 }
 
-void debug(const String str){
-  #ifdef DEBUG
-    Serial.print(str);
-  #endif
-}
-void debug(const unsigned int str){
-  #ifdef DEBUG
-    Serial.print(str);
-  #endif
-}
-void debug(const float str){
-  #ifdef DEBUG
-    Serial.print(str);
-  #endif
-}
-void debug(const unsigned long str){
-  #ifdef DEBUG
-    Serial.print(str);
-  #endif
-}
+
 #endif

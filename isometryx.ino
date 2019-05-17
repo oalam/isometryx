@@ -1,9 +1,7 @@
 #include "Config.h"
 #include "WorkoutFactory.h"
-#include "EventHandler.h"
 
 WorkoutFactory factory;
-EventHandler eventHandler(factory);
 
 void setup() {
   Serial.begin(250000);
@@ -28,14 +26,14 @@ void setup() {
   display.setTextColor(WHITE);
   display.setCursor(0, 0);
   display.println(F("Isometryx"));
+  display.println(F("Hang"));
+  display.println(F("Harder"));
   display.display();
   delay(500);
 
-  eventHandler.setup();  
 }
 
 void loop() {
-  eventHandler.loop();  
   factory.loop();
   
   delay(FRAME_RATE_MS);
