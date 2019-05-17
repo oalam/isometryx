@@ -6,6 +6,7 @@
 
 const int maxForceLAddress = 0;   // Location we want the data to be put.
 const int maxForceRAddress =  4; // Move address to the next byte after maxForceAddress
+const int bodyWeightAddress =  8; // Move address to the next byte after maxForceAddress
 
 class Climber {
   public:
@@ -54,6 +55,15 @@ class Climber {
       return mMaxForceL;
     }
 
+    float getWeight(){
+      return mWeight;
+    }
+
+    void setWeight(float weight){
+      mWeight = weight;
+      writeFloat(bodyWeightAddress, mWeight);
+    }
+
     float strenghToWeight(float loadWeight) {
       return loadWeight / mWeight;
     }
@@ -61,10 +71,13 @@ class Climber {
     void load() {
       mMaxForceL = readFloat(maxForceLAddress);
       mMaxForceR = readFloat(maxForceRAddress);
+      mWeight = readFloat(bodyWeightAddress);
       Serial.print(F("Read climber data from EEPROM : "));
       Serial.print(mMaxForceL);
       Serial.print( F(" "));
-      Serial.println(mMaxForceR);
+      Serial.print(mMaxForceR);
+      Serial.print( F(" "));
+      Serial.println(mWeight);
       if(mMaxForceL <= 0.0f)
         mMaxForceL = 3.0f;
 

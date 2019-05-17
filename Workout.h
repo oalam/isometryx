@@ -16,6 +16,7 @@ enum WorkoutType {
 };
 
 enum WorkoutState {
+  READY,
   HANGING,
   RESTING,
   IDLE,
@@ -44,12 +45,7 @@ class Workout {
       mRepHangingDurationMs = repHangingDurationMs;
       mRestDurationMs = restDurationMs;
       mMaxPercentLimit = maxPercentLimit; 
-      if(mHangingMode == TWO_HANDS){
-         mCurrentHand = BOTH;
-      }else{
-        mCurrentHand = LEFT;
-      }
-      reset(IDLE);
+      fullReset(READY);
     }
 
 
@@ -78,10 +74,17 @@ class Workout {
       return (mRepHangingDurationMs - mTimeOverLimit) / 1000 ;
     }
 
+    int timeOverLimit() {
+      return mTimeOverLimit / 1000 ;
+    }
+
     int remainingRestTime() {
       return (mRestDurationMs - mRestingTime) / 1000;
     }
 
+    int getTUT() {
+      return (mTUT) / 1000;
+    }
 
     Climber getClimber() {
       return climber;
@@ -115,13 +118,32 @@ class Workout {
       return mTotalReps;
     }
 
+    boolean doChangeWorkout(){
+      return mAbortedRepsCount >= MAX_ABORTED_REPS;
+    }
+
     void reset(WorkoutState newState) {
       mTimeOverLimit = 0;
+      mIdleTime = 0;
       mRestingTime = 0;
       mStartTime = millis();
       mCurrentRepMaxForce = 0.0f;
       mState = newState;
       stats.reset();
+    }
+
+    void fullReset(WorkoutState newState) {
+      reset(newState);
+      mSetsCount = 0;
+      mRepsCount = 0;
+      mCurrentRepMaxForce = 0.0f;
+      mCurrentRepMaxStrengh2Weight = 0.0f;
+      mAbortedRepsCount = 0;
+      if(mHangingMode == TWO_HANDS){
+         mCurrentHand = BOTH;
+      }else{
+        mCurrentHand = LEFT;
+      }
     }
 
     void setup() {
@@ -137,14 +159,21 @@ class Workout {
 #endif
       render();
       
-      // wait a little while DONE or SWITCHING_HANDS
-      if (mState == DONE || mState == SWITCHING_HANDS) {
-        delay(IDLE_TIME_MS);
+      // wait a little while READY, DONE or SWITCHING_HANDS to dispaly specific stuff
+      if (mState == READY || mState == DONE || mState == SWITCHING_HANDS) {
+        delay(DISPLAY_TIME_MS);
         reset(IDLE);
         return;
       }
 
       if (mState == IDLE) {
+        mIdleTime += FRAME_RATE_MS;
+
+        // If nothing has been done for too long do a full reset
+        if(mIdleTime >= MAX_IDLE_TIME_MS){
+          fullReset(READY);
+        }
+
         // Start HANGING rep if there's more thant 2kg applied while IDLE
         if(stats.last() > 2){
           mRepsCount++;
@@ -154,21 +183,24 @@ class Workout {
       }
       
       if (mState == HANGING){
-      
-        // increase time over limit
+
+        // increase time over limit & time under tension
         if (percentMax() >= mMaxPercentLimit) {
           mTimeOverLimit += FRAME_RATE_MS;
+          mTUT += FRAME_RATE_MS;
         }
 
         // check for new max force
         if(mCurrentRepMaxForce < stats.maxVal() ){
           mCurrentRepMaxForce = stats.maxVal();
+          mCurrentRepMaxStrengh2Weight = strenghToWeight();
         }
 
         // Go back to IDLE when there's less than 2kg applied when HANGING
         if(stats.last() <= 2) {
-          onRepAbort();
           mRepsCount--;
+          mAbortedRepsCount++;
+          onRepAbort();
           reset(IDLE);
           return;
         }
@@ -176,6 +208,7 @@ class Workout {
         // Finish a rep when we've been hanging for the requested time
         if (mTimeOverLimit > mRepHangingDurationMs) {
           onRepFinish();
+          mAbortedRepsCount = 0;
 
           // switch hands but don't rest and go IDLE to start right hand hanging
           if (mHangingMode == ONE_HAND){
@@ -201,9 +234,8 @@ class Workout {
 
           // have we done with the workout ?
           if (mSetsCount >= mTotalSets) {
-            mSetsCount = 0;
             onWorkoutFinish();
-            reset(DONE);
+            fullReset(DONE);
             return;
           }else{
             onRestStart();
@@ -242,6 +274,7 @@ class Workout {
     virtual void onWorkoutFinish() = 0;
     virtual void render() = 0;
 
+    unsigned short mAbortedRepsCount = 0;
     unsigned short mRepsCount = 0;
     unsigned short mSetsCount = 0;
     unsigned short mTotalReps;
@@ -250,18 +283,24 @@ class Workout {
     unsigned long mRestDurationMs;
     float mMaxPercentLimit;
     float mCurrentRepMaxForce;
+    float mCurrentRepMaxStrengh2Weight;
     WorkoutState mState;
 
 
     unsigned long mStartTime;
     unsigned long mTimeOverLimit;
     unsigned long mRestingTime;
+    unsigned long mIdleTime;
+
+    unsigned long mTUT = 0;
+    float mAvgLoad = 0.0f;
 
     Hand mCurrentHand;
     HangingMode mHangingMode;
     WorkoutType mType;
     Climber climber;
     WorkoutStats stats;
+    
 };
 
 #endif

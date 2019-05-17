@@ -28,11 +28,11 @@ class BodyweightAssessmentWorkout : public Workout {
 
     
     void onRepFinish(){
-      if( mCurrentHand == LEFT && mMaxForceLeft < mCurrentRepMaxForce){
-        mMaxForceLeft = mCurrentRepMaxForce;
-      }else if( mCurrentHand == RIGHT && mMaxForceRight < mCurrentRepMaxForce){
-        mMaxForceRight = mCurrentRepMaxForce;
-      }
+#ifdef DEBUG
+      Serial.println(F("setting new weight : "));
+      Serial.println(mCurrentRepMaxForce);
+#endif
+      climber.setWeight(mCurrentRepMaxForce);
     }
 
     void onRepStart(){
@@ -56,25 +56,47 @@ class BodyweightAssessmentWorkout : public Workout {
     }
 
     void onWorkoutFinish(){
-      if (climber.getMaxForceL() < mMaxForceLeft ) {
-        climber.setMaxForceL(mMaxForceLeft);
-      }
-
-      if (climber.getMaxForceR() < mMaxForceRight) {
-        climber.setMaxForceR(mMaxForceRight);
-      }
-    }
-
-
-    void render(){
-
-    }
-
-  private:
-    float mMaxForceLeft = 0.0f;
-    float mMaxForceRight = 0.0f;
-
    
+    }
+
+
+    void render() {
+
+      display.clearDisplay();
+      display.setTextSize(2);
+      display.setTextColor(WHITE);
+      display.setCursor(0, 0);
+
+      switch (getState()) {
+
+        case READY :
+        case IDLE : 
+          display.println(F("BodyWeight"));
+          display.print(valueToString(getClimber().getWeight(), 1));
+          display.println(F("kg"));
+          break;
+
+        case HANGING :
+          display.println(F("BodyWeight"));
+          display.print(valueToString(stats.last(), 1));
+          display.println(F("kg"));
+          
+          display.print(remainingTime());
+          display.println(F("s"));
+          break;
+        
+        case DONE :
+          display.println(F("Done !"));
+          display.print(valueToString(getClimber().getWeight(), 1));
+          display.println(F("kg"));
+          break;
+
+      }
+
+
+      display.display();
+    }
+
 
 };
 

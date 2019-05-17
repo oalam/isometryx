@@ -13,7 +13,7 @@ const float MAX_FORCE_MAX_PRECENT_LIMIT = 20.0f;
 #else
 
 const unsigned int MAX_FORCE_NUM_REPS = 8;
-const unsigned int MAX_FORCE_NUM_SETS = 1;
+const unsigned int MAX_FORCE_NUM_SETS = 3;
 const unsigned long MAX_FORCE_REP_HANGING_DURATION_MS = 10000;
 const unsigned long MAX_FORCE_REST_DURATION_MS = 120000;
 const float MAX_FORCE_MAX_PRECENT_LIMIT = 80.0f;
@@ -147,6 +147,14 @@ class MaxForceAssessmentWorkout : public Workout {
         case SWITCHING_HANDS :
           display.println(F("Switch "));
           break;
+
+        case READY :
+          display.println(F("MaxForce "));
+          display.print(valueToString(getClimber().getMaxForceL(), 1));
+          display.print(F(" "));
+          display.println(valueToString(getClimber().getMaxForceR(), 1));
+          break;
+
 
         default:
           display.println(F("..."));

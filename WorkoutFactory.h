@@ -1,14 +1,20 @@
 #ifndef WORKOUT_FACTORY_H
 #define WORKOUT_FACTORY_H
 
+
+
 #include "Workout.h"
 #include "workouts/BodyweightAssesmentWorkout.h"
 #include "workouts/MaxForceAssesmentWorkout.h"
+#include "workouts/FreeWorkout.h"
 
 
 class WorkoutFactory {
   public:
-    WorkoutFactory()  {}
+    WorkoutFactory()  { }
+
+  
+
 
     void setType(WorkoutType type) {
       mModeType = type;
@@ -24,7 +30,7 @@ class WorkoutFactory {
     Workout *next() {
 
       if(mModeType == NULL){
-        setType(WARMUP);
+        setType(ASSESSMENT_BODYWEIGHT);
       }
 
       if (mCurrentWorkout != NULL) {
@@ -34,24 +40,18 @@ class WorkoutFactory {
 
       switch (mModeType) {
         case ASSESSMENT_BODYWEIGHT :
-          setType(WARMUP);
-          Serial.println(F("Workout: WARMUP"));
-          mCurrentWorkout = new MaxForceAssessmentWorkout();
+          setType(FREE_WORKOUT);
+          Serial.println(F("Workout: FREE_WORKOUT"));
+          mCurrentWorkout = new FreeWorkout();
           break;
           
-        case WARMUP:
+        case FREE_WORKOUT:
           setType(ASSESSMENT_MAXFORCE);
           Serial.println(F("Workout: ASSESSMENT_MAXFORCE"));
           mCurrentWorkout = new MaxForceAssessmentWorkout();
           break;
 
         case ASSESSMENT_MAXFORCE :
-          setType(WORKOUT_MAXHANGS);
-          Serial.println(F("Workout: WORKOUT_MAXHANGS"));
-          mCurrentWorkout = new MaxForceAssessmentWorkout();
-          break;
-
-        case WORKOUT_MAXHANGS :
           setType(ASSESSMENT_BODYWEIGHT);
           Serial.println(F("Workout: ASSESSMENT_BODYWEIGHT"));
           mCurrentWorkout = new BodyweightAssessmentWorkout();
@@ -67,10 +67,13 @@ class WorkoutFactory {
 
   void loop(){
     getCurrentWorkout()->loop();
+    if(getCurrentWorkout()->doChangeWorkout())
+      next();
+
   }
 
   protected:
-    WorkoutType mModeType = WARMUP;
+    WorkoutType mModeType;
     Workout *mCurrentWorkout = NULL;
 };
 

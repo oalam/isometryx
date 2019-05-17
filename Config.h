@@ -1,7 +1,7 @@
 #ifndef CONFIG_H
 #define CONFIG_H
 
-//#define DEBUG
+#define DEBUG
 
 #include <SPI.h>
 #include <Wire.h>
@@ -9,8 +9,10 @@
 #include <Adafruit_SSD1306.h>
 
 // Isometryx config
+const int MAX_ABORTED_REPS = 2;
 const int FRAME_RATE_MS = 100;
-const int IDLE_TIME_MS = 2000;
+const int DISPLAY_TIME_MS = 2000;
+const int MAX_IDLE_TIME_MS = 10000;
 
 
 // HX711 circuit wiring

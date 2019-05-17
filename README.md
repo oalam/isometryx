@@ -1,7 +1,8 @@
 TODO
 
-- detect idle time (reset after 10" IDLE)
-- switch to next mode after 3 aborted reps
+
 - add a reset mode (10" hang at 20%)
 - add warmup mode
-- add serial plotter
+- add tut fo workout + avgload in timezone
+
+- add a workout to workout comparison chart to see if performance is incresing or decreasing (time to rest = over training)

@@ -1,3 +1,6 @@
 {
-    "restructuredtext.confPath": "/Users/tom/Documents/workspace/logisland/logisland-documentation"
+    "restructuredtext.confPath": "/Users/tom/Documents/workspace/logisland/logisland-documentation",
+    "files.associations": {
+        "functional": "cpp"
+    }
 }
