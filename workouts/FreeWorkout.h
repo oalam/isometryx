@@ -37,8 +37,9 @@ class FreeWorkout : public Workout {
       if(mTimeOverLimit >= 2000){
         mRepsCount++;
         mAbortedRepsCount--;    
-        mPreviousMax = mCurrentRepMaxForce; 
-        mPreviousMaxStrengh2Weight = mCurrentRepMaxStrengh2Weight;   
+        mPreviousMean = mRepStats.mean(); 
+        mPreviousMeanStrengh2Weight = climber.strenghToWeight(mRepStats.mean()); 
+        sessionStats.incrementRep();  
       }
 
     }
@@ -74,29 +75,33 @@ class FreeWorkout : public Workout {
         case READY :
           display.println(F("FreeHang"));
 
-          display.print(mRepsCount);
-          display.print(F("r "));
-          display.print(getTUT());
-          display.println(F("s"));
+          display.print(sessionStats.getTUTs());
+          display.print(F("s "));
+          display.print(sessionStats.getTotalNumRep());
+          display.println(F("r"));
 
-          display.print(valueToString(mAvgLoad,1));
-          display.print(F(" "));
-          display.println(valueToString(mPreviousMax,1));
+          display.print(valueToString(mPreviousMean,1));
+          display.print(F("kg "));
+          display.print((int)(mRepPercentMaxStats.mean()));
+          display.println(F("% "));
 
-          display.print(valueToString(mPreviousMaxStrengh2Weight,1));
+          display.print(valueToString(mPreviousMeanStrengh2Weight,1));
           display.println(F(" s2w"));
           break;
 
         case HANGING :
           display.println(F("FreeHang"));
 
-          display.print(valueToString(stats.last(), 1));
+          display.print(timeOverLimit());
+          display.println(F("s"));
+
+          display.print(valueToString(mRepStats.last(), 1));
           display.print(F("kg "));
           display.print(percentMax());
           display.println(F("%"));
-
-          display.print(timeOverLimit());
-          display.println(F("s"));
+        
+          display.print(valueToString(climber.strenghToWeight(mRepStats.last()),1));
+          display.println(F(" s2w"));
 
           break;
         
@@ -107,8 +112,8 @@ class FreeWorkout : public Workout {
     }
 
   private:
-    float mPreviousMax;
-    float mPreviousMaxStrengh2Weight;
+    float mPreviousMean;
+    float mPreviousMeanStrengh2Weight;
 };
 
 #endif

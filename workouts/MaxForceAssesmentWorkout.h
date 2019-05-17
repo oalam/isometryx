@@ -75,7 +75,7 @@ class MaxForceAssessmentWorkout : public Workout {
       switch (getState()) {
 
         case IDLE : 
-          display.println(F("Max Force"));
+          display.println(F("MaxForce"));
           display.print(String(getRepsCount()));
           display.print(F("/"));
           display.print(String(getNumReps()));
@@ -97,15 +97,16 @@ class MaxForceAssessmentWorkout : public Workout {
           break;
 
         case HANGING :
+          display.println(F("MaxForce"));
           if(mHangingMode == ONE_HAND){
             if(mCurrentHand == LEFT){
               display.print(F("L"));
-              display.print(valueToString(getStats().last(), 1));
+              display.print(valueToString(mRepStats.last(), 1));
               display.print(F(" "));
               display.println(valueToString(getClimber().getMaxForceL(), 1));
             }else{
               display.print(F("R"));
-              display.print(valueToString(getStats().last(), 1));
+              display.print(valueToString(mRepStats.last(), 1));
               display.print(F(" "));
               display.println(valueToString(getClimber().getMaxForceR(), 1));
             }
@@ -129,7 +130,8 @@ class MaxForceAssessmentWorkout : public Workout {
           break;
         
         case RESTING :
-          display.print(F("Rest "));
+          display.println(F("MaxForce"));
+          display.print(F("rest "));
           display.print(String(remainingRestTime()));
           display.println(F("s"));
           display.print(valueToString(mMaxForceLeft, 1));
@@ -149,7 +151,7 @@ class MaxForceAssessmentWorkout : public Workout {
           break;
 
         case READY :
-          display.println(F("MaxForce "));
+          display.println(F("MaxForce"));
           display.print(valueToString(getClimber().getMaxForceL(), 1));
           display.print(F(" "));
           display.println(valueToString(getClimber().getMaxForceR(), 1));

@@ -1,12 +1,14 @@
 #ifndef CONFIG_H
 #define CONFIG_H
 
-#define DEBUG
+//#define DEBUG
 
+#include "HX711.h"
 #include <SPI.h>
 #include <Wire.h>
 #include <Adafruit_GFX.h>
 #include <Adafruit_SSD1306.h>
+#include "SessionStats.h"
 
 // Isometryx config
 const int MAX_ABORTED_REPS = 2;
@@ -14,6 +16,7 @@ const int FRAME_RATE_MS = 100;
 const int DISPLAY_TIME_MS = 2000;
 const int MAX_IDLE_TIME_MS = 10000;
 
+SessionStats sessionStats;
 
 // HX711 circuit wiring
 const short L_LOADCELL_DOUT_PIN = 2;
@@ -21,6 +24,12 @@ const short L_LOADCELL_SCK_PIN = 3;
 
 const short R_LOADCELL_DOUT_PIN = 4;
 const short R_LOADCELL_SCK_PIN = 5;
+
+
+
+HX711 scaleUp;
+HX711 scaleDown;
+
 
 // SSD1306 wiring
 #define SCREEN_WIDTH 128 // OLED display width, in pixels

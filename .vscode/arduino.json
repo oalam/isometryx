@@ -1,6 +1,6 @@
 {
     "board": "arduino:avr:uno",
-    "port": "/dev/cu.usbmodem146101",
+    "port": "/dev/cu.usbmodem141101",
     "sketch": "isometryx.ino",
     "programmer": "AVRISP mkII"
 }

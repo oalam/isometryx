@@ -7,7 +7,7 @@
 #include "workouts/BodyweightAssesmentWorkout.h"
 #include "workouts/MaxForceAssesmentWorkout.h"
 #include "workouts/FreeWorkout.h"
-
+#include "workouts/SummaryWorkout.h"
 
 class WorkoutFactory {
   public:
@@ -22,6 +22,7 @@ class WorkoutFactory {
 
     Workout *getCurrentWorkout() {
       if (mCurrentWorkout == NULL) {
+        mModeType = SUMMARY;
         return next();
       }
       return mCurrentWorkout;
@@ -29,17 +30,13 @@ class WorkoutFactory {
 
     Workout *next() {
 
-      if(mModeType == NULL){
-        setType(ASSESSMENT_BODYWEIGHT);
-      }
-
       if (mCurrentWorkout != NULL) {
         delete mCurrentWorkout;
         mCurrentWorkout = NULL;
       }
 
       switch (mModeType) {
-        case ASSESSMENT_BODYWEIGHT :
+        case SUMMARY :
           setType(FREE_WORKOUT);
           Serial.println(F("Workout: FREE_WORKOUT"));
           mCurrentWorkout = new FreeWorkout();
@@ -56,14 +53,18 @@ class WorkoutFactory {
           Serial.println(F("Workout: ASSESSMENT_BODYWEIGHT"));
           mCurrentWorkout = new BodyweightAssessmentWorkout();
           break;
+
+        case ASSESSMENT_BODYWEIGHT :
+          setType(SUMMARY);
+          Serial.println(F("Workout: SUMMARY"));
+          mCurrentWorkout = new SummaryWorkout();
+          break;
+     
       }
 
       return mCurrentWorkout;
     }
 
-  void setup(){
-    getCurrentWorkout()->setup();
-  }
 
   void loop(){
     getCurrentWorkout()->loop();

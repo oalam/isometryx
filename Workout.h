@@ -2,6 +2,7 @@
 #define WORKOUT_H
 
 #include "WorkoutStats.h"
+#include "SessionStats.h"
 #include "Climber.h"
 
 
@@ -12,7 +13,8 @@ enum WorkoutType {
   WARMUP,
   ASSESSMENT_MAXFORCE,
   WORKOUT_MAXHANGS,
-  FREE_WORKOUT
+  FREE_WORKOUT,
+  SUMMARY
 };
 
 enum WorkoutState {
@@ -49,10 +51,6 @@ class Workout {
     }
 
 
-    float strenghToWeight() {
-      return climber.strenghToWeight(stats.maxVal());
-    }
-
     int percentMax() {
       float mMax = climber.getMaxForceL() + climber.getMaxForceR();
       if(mHangingMode == ONE_HAND){
@@ -66,7 +64,7 @@ class Workout {
       }
      
       if (mMax != 0.0f)
-        return (int) (stats.last() * 100.0f / mMax);
+        return (int) (mRepStats.last() * 100.0f / mMax);
       else return 0;
     }
 
@@ -80,10 +78,6 @@ class Workout {
 
     int remainingRestTime() {
       return (mRestDurationMs - mRestingTime) / 1000;
-    }
-
-    int getTUT() {
-      return (mTUT) / 1000;
     }
 
     Climber getClimber() {
@@ -106,10 +100,6 @@ class Workout {
       return mCurrentHand;
     }
 
-    WorkoutStats getStats() {
-      return stats;
-    }
-
     int getRepsCount() {
       return mRepsCount;
     }
@@ -129,7 +119,8 @@ class Workout {
       mStartTime = millis();
       mCurrentRepMaxForce = 0.0f;
       mState = newState;
-      stats.reset();
+      mRepStats.reset();
+      mRepPercentMaxStats.reset();
     }
 
     void fullReset(WorkoutState newState) {
@@ -146,22 +137,30 @@ class Workout {
       }
     }
 
-    void setup() {
-      stats.setup();
-      climber.load();
-    }
-
     void loop() {
-    
-      stats.loop(); 
+
+      // grab stats from load cells
+      if (scaleDown.wait_ready_timeout(1000) && scaleUp.wait_ready_timeout(1000)) {
+        float readingL = scaleDown.get_units() / 1000.0f;
+        float readingR = scaleUp.get_units() / 1000.0f;
+        unsigned long currentTime = millis();
+        mRepStats.addData(readingL + readingR);
+
+      } else {
+        Serial.println(F("HX711 not found."));
+      }
+  
+  
 #ifndef DEBUG
-      Serial.println(stats.last());
+      Serial.println(mRepStats.last());
 #endif
       render();
       
       // wait a little while READY, DONE or SWITCHING_HANDS to dispaly specific stuff
       if (mState == READY || mState == DONE || mState == SWITCHING_HANDS) {
-        delay(DISPLAY_TIME_MS);
+        if(mState == SWITCHING_HANDS){
+          delay(DISPLAY_TIME_MS);
+        }
         reset(IDLE);
         return;
       }
@@ -175,7 +174,7 @@ class Workout {
         }
 
         // Start HANGING rep if there's more thant 2kg applied while IDLE
-        if(stats.last() > 2){
+        if(mRepStats.last() > 2){
           mRepsCount++;
           onRepStart();       
           reset(HANGING);         
@@ -184,20 +183,24 @@ class Workout {
       
       if (mState == HANGING){
 
-        // increase time over limit & time under tension
+        // Store time under tension & percentMaxStats
+        int pMax = percentMax();
+        sessionStats.updateTUT(FRAME_RATE_MS, pMax);
+        mRepPercentMaxStats.addData(pMax);
+
+        // increase time over limit
         if (percentMax() >= mMaxPercentLimit) {
           mTimeOverLimit += FRAME_RATE_MS;
-          mTUT += FRAME_RATE_MS;
         }
 
         // check for new max force
-        if(mCurrentRepMaxForce < stats.maxVal() ){
-          mCurrentRepMaxForce = stats.maxVal();
-          mCurrentRepMaxStrengh2Weight = strenghToWeight();
+        if(mCurrentRepMaxForce < mRepStats.maxVal() ){
+          mCurrentRepMaxForce = mRepStats.maxVal();
+          mCurrentRepMaxStrengh2Weight = climber.strenghToWeight(mRepStats.maxVal());
         }
 
         // Go back to IDLE when there's less than 2kg applied when HANGING
-        if(stats.last() <= 2) {
+        if(mRepStats.last() <= 2) {
           mRepsCount--;
           mAbortedRepsCount++;
           onRepAbort();
@@ -209,6 +212,7 @@ class Workout {
         if (mTimeOverLimit > mRepHangingDurationMs) {
           onRepFinish();
           mAbortedRepsCount = 0;
+          sessionStats.incrementRep();
 
           // switch hands but don't rest and go IDLE to start right hand hanging
           if (mHangingMode == ONE_HAND){
@@ -292,14 +296,14 @@ class Workout {
     unsigned long mRestingTime;
     unsigned long mIdleTime;
 
-    unsigned long mTUT = 0;
     float mAvgLoad = 0.0f;
 
     Hand mCurrentHand;
     HangingMode mHangingMode;
     WorkoutType mType;
     Climber climber;
-    WorkoutStats stats;
+    WorkoutStats mRepStats;
+    WorkoutStats mRepPercentMaxStats;
     
 };
 

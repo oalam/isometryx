@@ -70,15 +70,21 @@ class BodyweightAssessmentWorkout : public Workout {
       switch (getState()) {
 
         case READY :
-        case IDLE : 
           display.println(F("BodyWeight"));
           display.print(valueToString(getClimber().getWeight(), 1));
           display.println(F("kg"));
           break;
 
+        case IDLE : 
+          display.println(F("BodyWeight"));
+          display.print(valueToString(getClimber().getWeight(), 1));
+          display.println(F("kg"));
+          display.println(F("start ..."));
+          break;
+
         case HANGING :
           display.println(F("BodyWeight"));
-          display.print(valueToString(stats.last(), 1));
+          display.print(valueToString(mRepStats.last(), 1));
           display.println(F("kg"));
           
           display.print(remainingTime());
