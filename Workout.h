@@ -2,306 +2,285 @@
 #define WORKOUT_H
 
 #include "WorkoutStats.h"
-#include "SessionStats.h"
-#include "Climber.h"
-
-
 
 
 enum WorkoutType {
-  ASSESSMENT_BODYWEIGHT,
-  WARMUP,
-  ASSESSMENT_MAXFORCE,
-  WORKOUT_MAXHANGS,
-  FREE_WORKOUT,
-  SUMMARY
+  DEADHANG,
+  BODYWEIGHT,
+  RESET
 };
 
 enum WorkoutState {
-  READY,
   HANGING,
-  RESTING,
-  IDLE,
-  SWITCHING_HANDS,
-  DONE
-};
-
-enum HangingMode {
-  ONE_HAND,
-  TWO_HANDS
-};
-
-enum Hand {
-  LEFT,
-  RIGHT,
-  BOTH
+  IDLE
 };
 
 class Workout {
   public:
-    Workout(HangingMode hangingMode, WorkoutType type, unsigned short totalReps, unsigned short totalSets, unsigned long repHangingDurationMs, unsigned long restDurationMs, float maxPercentLimit) {
-      mHangingMode = hangingMode;
-      mType = type;
-      mTotalReps = totalReps;
-      mTotalSets = totalSets;
-      mRepHangingDurationMs = repHangingDurationMs;
-      mRestDurationMs = restDurationMs;
-      mMaxPercentLimit = maxPercentLimit; 
-      fullReset(READY);
+    Workout() {
+      fullReset(IDLE);
     }
 
+    void setBodyWeight(float newWeight){
+      mBodyWeight = newWeight;
+    }
 
-    int percentMax() {
-      float mMax = climber.getMaxForceL() + climber.getMaxForceR();
-      if(mHangingMode == ONE_HAND){
-        if(mCurrentHand == LEFT){
-          mMax = climber.getMaxForceL();
-        }
-        else {
-          mMax = climber.getMaxForceR();
-        }
-        
-      }
-     
-      if (mMax != 0.0f)
-        return (int) (mRepStats.last() * 100.0f / mMax);
+    float current(){
+      return mRepStats.last();
+    }
+
+    float sessionMax(){
+      return mSessionMax;
+    }
+
+    int percentMax() {     
+      if (mSessionMax != 0.0f)
+        return (int) (mRepStats.last() * 100.0f / mSessionMax);
       else return 0;
     }
 
-    int remainingTime() {
-      return (mRepHangingDurationMs - mTimeOverLimit) / 1000 ;
+
+    float strengthToWeight(float strength){
+      return strength / mBodyWeight;
     }
 
-    int timeOverLimit() {
-      return mTimeOverLimit / 1000 ;
-    }
-
-    int remainingRestTime() {
-      return (mRestDurationMs - mRestingTime) / 1000;
-    }
-
-    Climber getClimber() {
-      return climber;
-    }
-
-    WorkoutState getState(){
-      return mState;
-    }
-
-    WorkoutType getType(){
-      return mType;
-    }
-
-    HangingMode getHangingMode(){
-      return mHangingMode;
-    }
-
-    Hand getCurrentHand(){
-      return mCurrentHand;
-    }
-
-    int getRepsCount() {
-      return mRepsCount;
-    }
-
-    int getNumReps() {
-      return mTotalReps;
-    }
-
-    boolean doChangeWorkout(){
-      return mAbortedRepsCount >= MAX_ABORTED_REPS;
-    }
 
     void reset(WorkoutState newState) {
-      mTimeOverLimit = 0;
       mIdleTime = 0;
-      mRestingTime = 0;
+      mHangingTime = 0;
       mStartTime = millis();
-      mCurrentRepMaxForce = 0.0f;
       mState = newState;
-      mRepStats.reset();
-      mRepPercentMaxStats.reset();
+  
     }
 
     void fullReset(WorkoutState newState) {
       reset(newState);
-      mSetsCount = 0;
-      mRepsCount = 0;
-      mCurrentRepMaxForce = 0.0f;
-      mCurrentRepMaxStrengh2Weight = 0.0f;
       mAbortedRepsCount = 0;
-      if(mHangingMode == TWO_HANDS){
-         mCurrentHand = BOTH;
-      }else{
-        mCurrentHand = LEFT;
+      mRepStats.reset();
+      mRepPercentMaxStats.reset();
+    }
+
+
+    /**
+     * Grab current load from sensors and update hanging stats
+     */
+    void updateStats(){
+      // grab stats from load cells
+      if (scaleDown.wait_ready_timeout(100) && scaleUp.wait_ready_timeout(100)) {
+        float readingL = abs(scaleDown.get_units() / 1000.0f);
+        float readingR = abs(scaleUp.get_units() / 1000.0f);
+        mRepStats.addData(readingL + readingR);
+
+        
+        if(mRepStats.last() > 1){
+#ifdef DEBUG
+          Serial.print(readingL);
+          Serial.print(F(","));
+          Serial.println(readingR);
+#endif
+          ble.print(readingL);
+          ble.print(F(","));
+          ble.println(readingR);
+        }
+       
+
+      } else {
+        Serial.println(F("HX711 not found."));
+      }   
+
+    }
+
+    /**
+     * Called after 3 short hangs to switch to the next workout mode
+     */
+    void updateWorkoutType(){
+      if( mAbortedRepsCount >= MAX_ABORTED_REPS) {
+
+        switch (mType) {
+          case DEADHANG :
+            mType = BODYWEIGHT;
+            Serial.println(F("Workout: BODYWEIGHT"));
+            break;
+            
+          case BODYWEIGHT:
+           /* mType = RESET;
+            Serial.println(F("Workout: RESET"));
+            break;
+
+          case RESET :*/
+            mType = DEADHANG;
+            Serial.println(F("Workout: DEADHANG"));
+            break;
+        }
+        fullReset(IDLE);
       }
+    }
+
+
+    void render() {
+
+      display.clearDisplay();
+      display.setTextSize(2);
+      display.setTextColor(WHITE);
+      display.setCursor(0, 0);
+
+      switch (mType) {
+
+        case DEADHANG:
+          switch (mState) {
+
+            case IDLE :
+              display.println(F("DeadHang"));
+
+              display.print(mTUT/1000);
+              display.print(F("s "));
+              display.print(mTotalNumRep);
+              display.println(F("r"));
+
+              display.print((int)mRepStats.mean());
+              display.print(F("kg "));
+              display.print((int)(mRepPercentMaxStats.mean()));
+              display.println(F("% "));
+
+              display.print(strengthToWeight(mRepStats.mean()));
+              display.println(F("sw"));
+              break;
+
+            case HANGING :
+              display.println(F("DeadHang"));
+
+              display.print(mHangingTime/1000);
+              display.println(F("s"));
+
+              display.print((int)mRepStats.last());
+              display.print(F("kg "));
+              display.print(percentMax());
+              display.println(F("%"));
+            
+              display.print(strengthToWeight(mRepStats.last()));
+              display.println(F("sw "));
+              display.println(F(""));
+              break;
+            
+          }
+          break;
+        case BODYWEIGHT:
+          switch (mState) {
+    
+            case IDLE : 
+              display.println(F("BodyWeight"));
+              
+              display.print(mBodyWeight);
+              display.println(F("kg"));
+              
+              display.println(F("start ..."));
+              break;
+    
+            case HANGING :
+              display.println(F("BodyWeight"));
+              
+              display.print(mRepStats.last());
+              display.println(F("kg"));
+              
+              display.print(mHangingTime/1000);
+              display.println(F("s"));
+              break;
+          
+    
+          }
+          break;
+        case RESET:
+
+          break;
+      }
+
+
+
+
+      display.display();
     }
 
     void loop() {
 
-      // grab stats from load cells
-      if (scaleDown.wait_ready_timeout(1000) && scaleUp.wait_ready_timeout(1000)) {
-        float readingL = scaleDown.get_units() / 1000.0f;
-        float readingR = scaleUp.get_units() / 1000.0f;
-        unsigned long currentTime = millis();
-        mRepStats.addData(readingL + readingR);
-
-      } else {
-        Serial.println(F("HX711 not found."));
-      }
-  
-  
-#ifndef DEBUG
-      Serial.println(mRepStats.last());
-#endif
+      updateStats();
+      updateWorkoutType();
       render();
       
-      // wait a little while READY, DONE or SWITCHING_HANDS to dispaly specific stuff
-      if (mState == READY || mState == DONE || mState == SWITCHING_HANDS) {
-        if(mState == SWITCHING_HANDS){
-          delay(DISPLAY_TIME_MS);
-        }
-        reset(IDLE);
-        return;
-      }
-
       if (mState == IDLE) {
         mIdleTime += FRAME_RATE_MS;
 
         // If nothing has been done for too long do a full reset
         if(mIdleTime >= MAX_IDLE_TIME_MS){
-          fullReset(READY);
+          fullReset(IDLE);
         }
 
         // Start HANGING rep if there's more thant 2kg applied while IDLE
         if(mRepStats.last() > 2){
-          mRepsCount++;
-          onRepStart();       
+          mRepsCount++;   
+          mTotalNumRep++;
+          mRepStats.reset();
           reset(HANGING);         
         }
       }
       
       if (mState == HANGING){
+        mHangingTime += FRAME_RATE_MS;
 
         // Store time under tension & percentMaxStats
         int pMax = percentMax();
-        sessionStats.updateTUT(FRAME_RATE_MS, pMax);
+        mTUT += FRAME_RATE_MS;
         mRepPercentMaxStats.addData(pMax);
 
-        // increase time over limit
-        if (percentMax() >= mMaxPercentLimit) {
-          mTimeOverLimit += FRAME_RATE_MS;
-        }
-
         // check for new max force
-        if(mCurrentRepMaxForce < mRepStats.maxVal() ){
-          mCurrentRepMaxForce = mRepStats.maxVal();
-          mCurrentRepMaxStrengh2Weight = climber.strenghToWeight(mRepStats.maxVal());
+        if(mSessionMax < mRepStats.last() ){
+          mSessionMax = mRepStats.last();
+          mSessionMaxStrength2Weight = strengthToWeight(mSessionMax);
         }
-
+        
         // Go back to IDLE when there's less than 2kg applied when HANGING
         if(mRepStats.last() <= 2) {
-          mRepsCount--;
-          mAbortedRepsCount++;
-          onRepAbort();
+
+          // under 1" hang we consider that's a click
+          if(mHangingTime < 1000){
+            mAbortedRepsCount++;
+          }
+
+          if(mType == BODYWEIGHT){
+            mBodyWeight = mRepStats.maxVal();
+            writeFloat(BODYWEIGHT_EEPROM_ADDRESS, mBodyWeight);
+            Serial.print(F("Write climber data to EEPROM : "));
+            Serial.println(mBodyWeight);
+          }
+          
           reset(IDLE);
           return;
-        }
-
-        // Finish a rep when we've been hanging for the requested time
-        if (mTimeOverLimit > mRepHangingDurationMs) {
-          onRepFinish();
-          mAbortedRepsCount = 0;
-          sessionStats.incrementRep();
-
-          // switch hands but don't rest and go IDLE to start right hand hanging
-          if (mHangingMode == ONE_HAND){
-            
-            if (mCurrentHand == LEFT) {
-              mCurrentHand = RIGHT;
-              mRepsCount--;
-              reset(SWITCHING_HANDS);
-              return;
-            }
-            // done a full rep with the two hands, switching back to left
-            else {
-              mCurrentHand = LEFT;
-            }
-          }
-
-          // have we done with the set ?
-          if (mRepsCount >= mTotalReps) {
-            mRepsCount = 0;
-            mSetsCount++;
-            onSetFinish();
-          }
-
-          // have we done with the workout ?
-          if (mSetsCount >= mTotalSets) {
-            onWorkoutFinish();
-            fullReset(DONE);
-            return;
-          }else{
-            onRestStart();
-            reset(RESTING);
-            return;
-          }
-                    
         }
       }
-      
-
-      if (mState == RESTING){
-
-        // Rest time is over returning to IDLE
-        if(mRestingTime >= mRestDurationMs) {
-          onRestFinish();
-          reset(IDLE);
-          return;
-        } 
-        // otherwise increase resting time
-        else {
-          mRestingTime += FRAME_RATE_MS;
-        }
-
-      } 
     }
 
   protected:
 
-    virtual void onRepStart() = 0;
-    virtual void onRepFinish() = 0;
-    virtual void onRepAbort() = 0;
-    virtual void onRestStart() = 0;
-    virtual void onRestFinish() = 0;
-    virtual void onSetFinish() = 0;
-    virtual void onWorkoutFinish() = 0;
-    virtual void render() = 0;
 
     unsigned short mAbortedRepsCount = 0;
     unsigned short mRepsCount = 0;
-    unsigned short mSetsCount = 0;
-    unsigned short mTotalReps;
-    unsigned short mTotalSets;
-    unsigned long mRepHangingDurationMs;
-    unsigned long mRestDurationMs;
-    float mMaxPercentLimit;
-    float mCurrentRepMaxForce;
-    float mCurrentRepMaxStrengh2Weight;
-    WorkoutState mState;
+    unsigned short mTotalNumRep = 0;
 
 
+    float mBodyWeight = 70.0f;
+    float mSessionMax = 20.0f;
+    float mSessionMaxStrength2Weight = mSessionMax/mBodyWeight;
+    
+
+    unsigned int mHangingTime;
+    unsigned int mIdleTime;
     unsigned long mStartTime;
-    unsigned long mTimeOverLimit;
-    unsigned long mRestingTime;
-    unsigned long mIdleTime;
+    unsigned long mTUT = 0L;
 
-    float mAvgLoad = 0.0f;
+    
 
-    Hand mCurrentHand;
-    HangingMode mHangingMode;
-    WorkoutType mType;
-    Climber climber;
+    WorkoutType mType = DEADHANG;
+    WorkoutState mState = IDLE;
+
     WorkoutStats mRepStats;
     WorkoutStats mRepPercentMaxStats;
     

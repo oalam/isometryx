@@ -4,7 +4,7 @@
 #include <float.h>
 #include <math.h>
 
-const unsigned int MIN_WEIGHT_THRESHOLD = 2;
+const unsigned int MIN_WEIGHT_THRESHOLD = 1;
 const unsigned int MAX_TICK_WITHOUT_VALUE = 2;
 
 class WorkoutStats {
@@ -20,6 +20,10 @@ class WorkoutStats {
     void addData(float val) {
 
       mLast = abs(val);
+
+      if(val < MIN_WEIGHT_THRESHOLD)
+        return;
+      
       // reduce samples total by one sample value
       if (mCurrNumSamples >= mNumSamples) {
         mTotal = mTotal * (mNumSamples - 1) / mNumSamples;
@@ -31,9 +35,6 @@ class WorkoutStats {
       if (val > mMax)
         mMax = val;
 
-      if (mean() <= MIN_WEIGHT_THRESHOLD) {
-        reset();
-      }
     }
 
     float mean() const {
