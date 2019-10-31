@@ -14,3 +14,14 @@ TODO
 - add tut fo workout + avgload in timezone
 
 - add a workout to workout comparison chart to see if performance is incresing or decreasing (time to rest = over training)
+
+
+
+
+# BLE client
+
+needs Adafruit Python BluefruitLE : https://github.com/adafruit/Adafruit_Python_BluefruitLE
+
+    python ./ble_client.py
+
+will save incomming data into out.csv file
